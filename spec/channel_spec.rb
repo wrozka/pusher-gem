@@ -139,6 +139,34 @@ describe Pusher::Channel do
       }
     end
 
+    it 'should POST hashes by encoding as JSON in the request body' do
+      EM.run {
+        stub_request(:post, @pusher_url_regexp).to_return(:status => 202)
+        channel = Pusher::Channel.new(@client.url, 'test_channel', @client)
+        deferable = channel.trigger_async('new_event', {
+          :name => 'Pusher',
+          :last_name => 'App'
+        })
+        deferable.callback {
+          WebMock.should have_requested(:post, %r{/apps/20/channels/test_channel/events}).with { |req|
+            query_hash = req.uri.query_values
+            query_hash["name"].should == 'new_event'
+            query_hash["auth_key"].should == @client.key
+            query_hash["auth_timestamp"].should_not be_nil
+
+            parsed = MultiJson.decode(req.body)
+            parsed.should == {
+              "name" => 'Pusher',
+              "last_name" => 'App'
+            }
+
+            req.headers['Content-Type'].should == 'application/json'
+          }
+          EM.stop
+        }
+      }
+    end
+
     it "should POST to https api if ssl enabled" do
       @client.encrypted = true
       EM.run {

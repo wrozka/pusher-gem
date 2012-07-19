@@ -114,8 +114,10 @@ module Pusher
 
       deferrable = EM::DefaultDeferrable.new
 
-      http = EventMachine::HttpRequest.new(@uri).post({
-        :query => @params, :timeout => 5, :body => @body,
+      url = "#{@uri.scheme}://#{@uri.host}:#{@uri.port}#{encode_query(@uri, @params)}"
+
+      http = EventMachine::HttpRequest.new(url).post({
+        :timeout => 5, :body => @body,
         :head => {'Content-Type'=> 'application/json'}
       })
       http.callback {
